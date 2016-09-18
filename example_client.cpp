@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 #include "TCPConnector.h"
-#include "HTTPMessage.h"
 
 using namespace std;
 
