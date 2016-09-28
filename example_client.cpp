@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string>
 #include <iostream>
-#include "TCPConnector.h"
+#include "TCP/TCPConnector.h"
 
 using namespace std;
 
@@ -43,10 +43,13 @@ bool test_tcp_connection(TCPStream* stream)
         len = stream->receive(line,sizeof(line));
         string response(line);
         cout << "Got: " << response << "\n";
-        delete stream;
-        if(response.compare("Pong") == 0)
-            return true;
-        return false;
+        for(;;){
+
+        }
+//        delete stream;
+//        if(response.compare("Pong") == 0)
+//            return true;
+//        return false;
 
     }
 }
