@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string>
 #include <iostream>
-#include "TCPConnector.h"
+#include "TCP/TCPConnector.h"
 
 using namespace std;
 
