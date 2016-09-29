@@ -17,6 +17,7 @@ public:
     void addUser(User* u);
     void sendMessage(User* u, std::string message);
     void openChannel();
+    void transferFile(User* u, std::string filename,long filesize);
 
 private:
     std::vector<Message> messages;

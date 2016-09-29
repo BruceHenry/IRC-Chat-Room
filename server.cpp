@@ -70,7 +70,11 @@ void new_channel(User* person1, User* person2){
             line[len] = 0;
             printf("User1 sent - \n%s\n", line);
             string msg(line);
-            talk.sendMessage(person1,msg);
+            std::vector<std::string> splitCommand=split(msg,' ');
+            if(splitCommand[0].compare("TRANSFER")){
+                talk.transferFile(person1,splitCommand[1],atol(splitCommand[0].c_str()));
+            }
+            //talk.sendMessage(person1,msg);
         }
         if ((len = person2->getUserStream()->receive(line, sizeof(line))) > 0){
             line[len] = 0;

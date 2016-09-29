@@ -25,3 +25,35 @@ void Channel::sendMessage(User* sender, std::string message) {
     }
 
 }
+
+void Channel::transferFile(User* sender, std::string filename, long filesize) {
+    char* mfcc;
+    long sizecheck = 0;
+    int received=0;
+    TCPStream* s=sender->getUserStream();
+    if(filesize >1499){
+        mfcc=(char *) malloc(1500);
+        while(sizecheck<filesize){
+            received=s->receive(mfcc,1500);
+
+            for (User* u:users) {
+                TCPStream* r=u->getUserStream();
+                r->send(mfcc,received);
+
+            }
+            sizecheck+=received;
+
+        }
+    }
+    else{
+        mfcc=(char *) malloc(filesize+1);
+        received=s->receive(mfcc,filesize);
+        for (User* u:users) {
+            TCPStream* r=u->getUserStream();
+            r->send(mfcc,received);
+
+        }
+
+    }
+
+}
