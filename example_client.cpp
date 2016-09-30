@@ -28,58 +28,78 @@ TCPStream *stream = NULL;
 int main() {
     string ip;
     int port;
+    string cmd;
     TCPConnector *connector = new TCPConnector();
     while (1) {
         cout << "Please input IP:\n";
         cin >> ip;
         cout << "Please input port:\n";
         cin >> port;
-        //TCPConnector *connector = new TCPConnector();
-        //TCPStream *stream = connector->connect(ip.c_str(), port);
-        //streamR = stream;
         stream = connector->connect(ip.c_str(), port);
-        if (!test_tcp_connection(stream))
+        if (!test_tcp_connection(stream)) {
+            cout << "No server is found!\n";
             continue;
-        pthread_t id;
+        }
+        cout << "Input \"/connect\" to connect to another chat.\n";
+        for (;;) {
+            cin >> cmd;
+            if (cmd.compare("/connect") == 0) {
+                stream->send(cmd.c_str(), cmd.size());
+                break;
+            }
+        }
+        char line[50];
+        for (;;) {
+            stream->receive(line, sizeof(line));
+            string response(line);
+            if (response.compare("/pair") != 0) {
+                continue;
+            } else {
+                cout << "You are now chatting\n";
+                break;
+            }
+        }
+        pthread_t id;//Create a thread to receive.
         int ret = pthread_create(&id, NULL, receiver, NULL);
         if (ret) {
             cout << "Create pthread error!" << endl;
             continue;
         }
-
-        char a;
-        for (;;) {
-            cout << "\nPlease choose: \n\t(1)Send Messeges\n\t(2)Send Files\n\t(3)Exit\n";
-            cin >> a;
-            switch (a) {
-                case '1':
-                    send_messege(stream);
-                    continue;
-                case '2':
-                    send_file(stream);
-                    continue;
-                case '3':
-                    stream->send("/exit", 6);
-                    cout << endl << "Exiting......" << endl;
-                    break;
-                default:
-                    cout << "\nNo such option!\n";
-                    continue;
-            }
-            break;
-        }
+        send_messege(stream);
         pthread_cancel(id);
-        //delete connector;
         delete stream;
     }
 }
 
+bool test_tcp_connection(TCPStream *stream) {
+    if (stream) {
+        char line[50];
+        string testPing = "/ping";
+        //cout << "Sent \"Ping\" to test server" <<endl;
+        sleep(5);
+        stream->send(testPing.c_str(), testPing.size());
+        stream->receive(line, sizeof(line));
+        string response(line);
+        //delete stream;
+        if (response.compare("/pong") == 0) {
+            cout << "=====================================" << endl;
+            cout << "Connected to server\n";
+            return true;
+        }
+    }
+    cout << "Server is offline!!!\n";
+    return false;
+}
+
 bool send_messege(TCPStream *stream) {
-    cout << "\n\nNow you are chatting\nInput \"/quit\" to quit chatting127" << endl;
     cout << "=====================================\n" << endl;
     while (stream) {
         string testString;
         cin >> testString;
+        if (testString.compare("/file") == 0) {
+            send_file(stream);
+            continue;
+        }
         if (testString.compare("/quit") == 0)
             return true;
         stream->send(testString.c_str(), testString.size());
@@ -108,9 +128,8 @@ bool send_file(TCPStream *stream) {
 
     file_location += file_name;
     in.seekg(0, ios::beg);
-    int times=1500;
-    for(size;size>=1500;size-=1500,times+=1500)
-    {
+    int times = 1500;
+    for (size; size >= 1500; size -= 1500, times += 1500) {
         buffer = new char[1500];
         in.read(buffer, 1500);
         stream->send(buffer, 1500);//send a piece of file
@@ -126,57 +145,28 @@ bool send_file(TCPStream *stream) {
 }
 
 
-bool rec_file(std::string filename,long filesize,TCPStream *stream) {
-    string file_location="/tmp/"+filename;
-    char * buffer;
-    long sizeCheck=0;
-    int received=0;
+bool rec_file(std::string filename, long filesize, TCPStream *stream) {
+    string file_location = "/tmp/" + filename;
+    char *buffer;
+    long sizeCheck = 0;
+    int received = 0;
     ofstream outfile;
-    outfile.open(file_location,ios::out);
+    outfile.open(file_location, ios::out);
 
-    if(filesize>1499){
-        buffer=(char *) malloc(1500);
-        while(sizeCheck<filesize){
-            received=stream->receive(buffer,1500);
-            sizeCheck+=received;
-            outfile<<buffer;
+    if (filesize > 1499) {
+        buffer = (char *) malloc(1500);
+        while (sizeCheck < filesize) {
+            received = stream->receive(buffer, 1500);
+            sizeCheck += received;
+            outfile << buffer;
         }
-
-    }
-    else{
-        buffer=(char *) malloc(1500);
-        received=stream->receive(buffer,1500);
-        outfile<<buffer;
-
+    } else {
+        buffer = (char *) malloc(1500);
+        received = stream->receive(buffer, 1500);
+        outfile << buffer;
     }
     outfile.close();
-
     return true;
-    /*const char *filename2 = "/tmp/2.mp4";
-    ofstream out(filename2, ios::binary | ios::trunc);
-    out.write(buffer, size);
-    out.close();*/
-
-}
-
-bool test_tcp_connection(TCPStream *stream) {
-    if (stream) {
-        char line[50];
-        string testPing = "Ping";
-        //cout << "Sent \"Ping\" to test server" <<endl;
-        sleep(5);
-        stream->send(testPing.c_str(), testPing.size());
-        stream->receive(line, sizeof(line));
-        string response(line);
-        //delete stream;
-        if (response.compare("Pong") == 0) {
-            cout << "=====================================" << endl;
-            cout << "Connected to server\n";
-            return true;
-        }
-    }
-    cout << "Server is offline!!!\n";
-    return false;
 }
 
 void *receiver(void *ptr) {
@@ -187,11 +177,13 @@ void *receiver(void *ptr) {
             while ((len = stream->receive(line, sizeof(line))) > 0) {
                 line[len] = 0;
                 std::string msg(line);
-                std::vector<std::string> splitCommand=split(msg,' ');
-                if(splitCommand[0].compare("/file"))
-                    rec_file(splitCommand[1],stol(splitCommand[2]),stream);
-                if(line)
-                printf("Received:%s\n", line);
+                std::vector<std::string> splitCommand = split(msg, ' ');
+                if (splitCommand[0].compare("/file")) {
+                    rec_file(splitCommand[1], stol(splitCommand[2]), stream);
+                    continue;
+                }
+                if (line)
+                    printf("Received:%s\n", line);
             }
         }
     }
