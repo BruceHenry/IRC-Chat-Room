@@ -70,7 +70,11 @@ void new_channel(User* person1, User* person2){
             line[len] = 0;
             printf("User1 sent - \n%s\n", line);
             string msg(line);
-            talk.sendMessage(person1,msg);
+            std::vector<std::string> splitCommand=split(msg,' ');
+            if(splitCommand[0].compare("TRANSFER")){
+                talk.transferFile(person1,splitCommand[1],atol(splitCommand[0].c_str()));
+            }
+            //talk.sendMessage(person1,msg);
         }
         if ((len = person2->getUserStream()->receive(line, sizeof(line))) > 0){
             line[len] = 0;
@@ -85,16 +89,19 @@ void new_channel(User* person1, User* person2){
 void new_connection(TCPStream *stream, ClientQueue *cqueue){
     ssize_t len;
     char line[1000];
+
     while ((len = stream->receive(line, sizeof(line))) > 0)
     {
+        line[len]=0;
         std::ostringstream oss;
-        line[len] = 0;
         printf("received - \n%s\n", line);
+        printf(line);
         string rec(line);
         User me;
 
-
         vector<string> splitCommand = split(rec, ' ');
+        if(rec.compare("Ping"))
+        {stream->send("Pong",5);}
         if(splitCommand[0].compare("CONNECT") == 0) {
             me = User(splitCommand[1], stream,  false);
             cqueue->addUser(&me);
