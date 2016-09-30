@@ -2,11 +2,11 @@
 // Created by Erik Nadel on 9/27/16.
 //
 
+#include <cstdlib>
 #include "Channel.h"
 
 Channel::Channel() {
     users = std::vector<User*>();
-    messages = std::vector<Message>();
 
 }
 

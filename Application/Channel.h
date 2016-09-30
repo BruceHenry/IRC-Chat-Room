@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 #include "User.h"
-#include "Message.h"
+
+class User;
 
 class Channel {
 public:
@@ -20,7 +21,6 @@ public:
     void transferFile(User* u, std::string filename,long filesize);
 
 private:
-    std::vector<Message> messages;
     std::vector<User*> users;
 
 };

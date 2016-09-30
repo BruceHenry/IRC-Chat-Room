@@ -15,11 +15,12 @@
 using namespace std;
 
 void new_connection(TCPStream *stream, ClientQueue *c);
-void new_channel(User* person1, User* person2);
+void new_channel(Channel* newch, User* person1, User* person2);
 void connectionManager(ClientQueue* c);
 
 
 TCPAcceptor* acceptor = NULL;
+vector<Channel*> channels;
 
 int main(int argc, char** argv)
 {
@@ -31,6 +32,7 @@ int main(int argc, char** argv)
 
     ClientQueue cqueue = ClientQueue();
     acceptor = new TCPAcceptor(atoi(argv[1]));
+    channels = vector<Channel*>();
 
     if (acceptor->start() == 0)
     {
@@ -44,8 +46,12 @@ int main(int argc, char** argv)
                 User* firstperson = cqueue.getNext();
                 User* secondperson = cqueue.getNext();
 
-                std::thread channelthread(new_channel,firstperson, secondperson);
-                channelthread.detach();
+                Channel *newChannel = new Channel();
+
+                channels.push_back(newChannel);
+
+                new_channel(newChannel, firstperson, secondperson);
+
             }
 
         }
@@ -53,68 +59,51 @@ int main(int argc, char** argv)
     exit(0);
 }
 
-void new_channel(User* person1, User* person2){
+void new_channel(Channel *ch, User* person1, User* person2){
 
-    Channel talk = Channel();
-    talk.addUser(person1);
-    talk.addUser(person2);
+    ch->addUser(person1);
+    ch->addUser(person2);
+
+    person1->setActiveChannel(ch);
+    person2->setActiveChannel(ch);
 
     send("Found someone! Connecting you to a chat.", person1->getUserStream());
     send("Found someone! Connecting you to a chat.", person2->getUserStream());
-
-    ssize_t len;
-    char line[1000];
-
-    for(;;){
-        if ((len = person1->getUserStream()->receive(line, sizeof(line))) > 0){
-            line[len] = 0;
-            printf("User1 sent - \n%s\n", line);
-            string msg(line);
-            std::vector<std::string> splitCommand=split(msg,' ');
-            if(splitCommand[0].compare("TRANSFER")){
-                talk.transferFile(person1,splitCommand[1],atol(splitCommand[0].c_str()));
-            }
-            //talk.sendMessage(person1,msg);
-        }
-        if ((len = person2->getUserStream()->receive(line, sizeof(line))) > 0){
-            line[len] = 0;
-            printf("User2 sent - \n%s\n", line);
-            string msg(line);
-            talk.sendMessage(person2,msg);
-        }
-    }
 
 }
 
 void new_connection(TCPStream *stream, ClientQueue *cqueue){
     ssize_t len;
     char line[1000];
+    User me;
 
     while ((len = stream->receive(line, sizeof(line))) > 0)
     {
         line[len]=0;
         std::ostringstream oss;
-        printf("received - \n%s\n", line);
-        printf(line);
         string rec(line);
-        User me;
 
         vector<string> splitCommand = split(rec, ' ');
-        if(rec.compare("Ping"))
-        {stream->send("Pong",5);}
         if(splitCommand[0].compare("CONNECT") == 0) {
             me = User(splitCommand[1], stream,  false);
             cqueue->addUser(&me);
 
             int queuesize = cqueue->getSize();
-            oss << "You are position" << queuesize << "in the queue.";
+            oss << "You are position" << queuesize << "in the queue.\n";
             send(oss.str(), stream);
+            oss.flush();
 
             if(cqueue->getSize() <= 1) {
-                oss << "Currently no one else is online. Sorry :(. We'll match you with someone"
+                oss << "Currently no one else is online.\n Sorry :(.\n We'll match you with someone"
                         "once there is another person!\n";
                 send(oss.str(), stream);
             }
+        }
+
+        if(splitCommand[0].compare("MSG") == 0){
+            string msg = rec;
+            if (&me != NULL)
+                me.sendMessage(msg);
 
         }
 

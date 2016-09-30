@@ -15,6 +15,10 @@ User::User(std::string username, TCPStream* stream,  bool isAdmin) {
     this->stream = stream;
 }
 
+void User::setActiveChannel(Channel *ch) {
+    this->currentChannel = ch;
+}
+
 bool User::operator==(User u) {
 
     if (this->username.compare(u.username) == 0)
@@ -23,6 +27,11 @@ bool User::operator==(User u) {
         return false;
 
 }
+
+void User::sendMessage(string msg){
+    this->currentChannel->sendMessage(this,msg);
+}
+
 
 TCPStream* User::getUserStream() {
     return this->stream;
