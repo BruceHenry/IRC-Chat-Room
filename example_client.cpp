@@ -76,7 +76,6 @@ bool test_tcp_connection(TCPStream *stream) {
         char line[50];
         string testPing = "/ping";
         //cout << "Sent \"Ping\" to test server" <<endl;
-        sleep(5);
         stream->send(testPing.c_str(), testPing.size());
         stream->receive(line, sizeof(line));
         string response(line);

@@ -96,7 +96,7 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue){
         std::ostringstream oss;
         printf("received - \n%s\n", line);
         printf(line);
-        std::string rec(line);
+        string rec(line);
         User me;
 
         vector<string> splitCommand = split(rec, ' ');
