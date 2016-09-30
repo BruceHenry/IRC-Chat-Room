@@ -87,31 +87,44 @@ bool send_messege(TCPStream *stream) {
 }
 
 bool send_file(TCPStream *stream) {
-    string send_request = "/file";
-    stream->send(send_request.c_str(), send_request.size());//send file transferring request
-    sleep(1);
-    string file_location = "/tmp/";
-    string file_name = "1.txt";
-    stream->send(file_name.c_str(), file_name.size());//send file name
-    sleep(1);
     char *buffer;
     long size;
+    string file_location = "/tmp/";
+    string file_name = "1.txt";
     file_location += file_name;
     ifstream in(file_location.c_str(), ios::binary);
     in.seekg(0, ios::end);//Set position to the end, in order to know the size of file
-    size = in.tellg();
+    size = in.tellg();//get size of the file
     if (size < 0) {//In case the file does not exist.
         cout << "Cannot get the file!\n";
         return false;
     }
-    buffer = new char[size];
+    /*make a sending request*/
+    string send_request = "/file";
+    send_request.append(" ");
+    send_request = send_request + file_name;
+    send_request.append(" ");
+    send_request = send_request + to_string(size);
+
+    file_location += file_name;
     in.seekg(0, ios::beg);
+    int times=1500;
+    for(size;size>=1500;size-=1500,times+=1500)
+    {
+        buffer = new char[1500];
+        in.read(buffer, 1500);
+        stream->send(buffer, 1500);//send a piece of file
+        in.seekg(times, ios::beg);
+        delete buffer;
+    }
+    buffer = new char[size];
     in.read(buffer, size);
-    cout<<"Transferring...";
-    stream->send(buffer, size);//send file content
-    sleep(5);
+    stream->send(buffer, size);//send last piece of file
+    delete buffer;
+    in.close();
     return true;
 }
+
 
 bool rec_file(std::string filename,long filesize,TCPStream *stream) {
     string file_location="/tmp/"+filename;
