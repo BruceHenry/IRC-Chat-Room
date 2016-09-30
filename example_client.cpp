@@ -149,6 +149,7 @@ bool rec_file(std::string filename,long filesize,TCPStream *stream) {
         outfile<<buffer;
 
     }
+    outfile.close();
 
     return true;
     /*const char *filename2 = "/tmp/2.mp4";
