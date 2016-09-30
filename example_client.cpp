@@ -7,6 +7,7 @@
 #include "TCP/TCPAcceptor.h"
 #include "TCP/TCPConnector.h"
 #include "TCP/TCPStream.h"
+#include "Utilities.h"
 #include<pthread.h>
 #include <fstream>
 
@@ -112,7 +113,31 @@ bool send_file(TCPStream *stream) {
     return true;
 }
 
-bool rec_file() {
+bool rec_file(std::string filename,long filesize,TCPStream *stream) {
+    string file_location="/tmp/"+filename;
+    char * buffer;
+    long sizeCheck=0;
+    int received=0;
+    ofstream outfile;
+    outfile.open(file_location,ios::out);
+
+    if(filesize>1499){
+        buffer=(char *) malloc(1500);
+        while(sizeCheck<filesize){
+            received=stream->receive(buffer,1500);
+            sizeCheck+=received;
+            outfile<<buffer;
+        }
+
+    }
+    else{
+        buffer=(char *) malloc(1500);
+        received=stream->receive(buffer,1500);
+        outfile<<buffer;
+
+    }
+
+    return true;
     /*const char *filename2 = "/tmp/2.mp4";
     ofstream out(filename2, ios::binary | ios::trunc);
     out.write(buffer, size);
@@ -146,6 +171,11 @@ void *receiver(void *ptr) {
             char line[1000];
             while ((len = stream->receive(line, sizeof(line))) > 0) {
                 line[len] = 0;
+                std::string msg(line);
+                std::vector<std::string> splitCommand=split(msg,' ');
+                if(splitCommand[0].compare("/file"))
+                    rec_file(splitCommand[1],atol(splitCommand[2]),stream);
+                if(line)
                 printf("Received:%s\n", line);
             }
         }

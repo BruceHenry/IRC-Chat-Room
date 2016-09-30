@@ -31,13 +31,19 @@ void Channel::transferFile(User* sender, std::string filename, long filesize) {
     long sizecheck = 0;
     int received=0;
     TCPStream* s=sender->getUserStream();
+    std::string filemessage="/file"+std::string(" ")+filename+std::string(" ")+std::to_string(filesize);
     if(filesize >1499){
         mfcc=(char *) malloc(1500);
+        int i=1;
         while(sizecheck<filesize){
             received=s->receive(mfcc,1500);
-
+            i++;
             for (User* u:users) {
+
                 TCPStream* r=u->getUserStream();
+                if(i==0) {
+                    r->send(filemessage.c_str(), filemessage.size());
+                }
                 r->send(mfcc,received);
 
             }
@@ -50,6 +56,7 @@ void Channel::transferFile(User* sender, std::string filename, long filesize) {
         received=s->receive(mfcc,filesize);
         for (User* u:users) {
             TCPStream* r=u->getUserStream();
+            r->send(filemessage.c_str(), filemessage.size());
             r->send(mfcc,received);
 
         }

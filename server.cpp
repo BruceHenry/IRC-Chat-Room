@@ -96,8 +96,6 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue){
         printf("received - \n%s\n", line);
         string rec(line);
         User me;
-
-
         vector<string> splitCommand = split(rec, ' ');
         if(splitCommand[0].compare("CONNECT") == 0) {
             me = User(splitCommand[1], stream,  false);
