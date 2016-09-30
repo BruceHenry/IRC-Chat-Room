@@ -164,6 +164,7 @@ bool test_tcp_connection(TCPStream *stream) {
         char line[50];
         string testPing = "Ping";
         //cout << "Sent \"Ping\" to test server" <<endl;
+        sleep(5);
         stream->send(testPing.c_str(), testPing.size());
         stream->receive(line, sizeof(line));
         string response(line);
@@ -188,7 +189,7 @@ void *receiver(void *ptr) {
                 std::string msg(line);
                 std::vector<std::string> splitCommand=split(msg,' ');
                 if(splitCommand[0].compare("/file"))
-                    rec_file(splitCommand[1],atol(splitCommand[2]),stream);
+                    rec_file(splitCommand[1],stol(splitCommand[2]),stream);
                 if(line)
                 printf("Received:%s\n", line);
             }

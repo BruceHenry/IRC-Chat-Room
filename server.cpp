@@ -89,14 +89,19 @@ void new_channel(User* person1, User* person2){
 void new_connection(TCPStream *stream, ClientQueue *cqueue){
     ssize_t len;
     char line[1000];
+
     while ((len = stream->receive(line, sizeof(line))) > 0)
     {
+        line[len]=0;
         std::ostringstream oss;
-        line[len] = 0;
         printf("received - \n%s\n", line);
-        string rec(line);
+        printf(line);
+        std::string rec(line);
         User me;
+
         vector<string> splitCommand = split(rec, ' ');
+        if(rec.compare("Ping"))
+        {stream->send("Pong",5);}
         if(splitCommand[0].compare("CONNECT") == 0) {
             me = User(splitCommand[1], stream,  false);
             cqueue->addUser(&me);

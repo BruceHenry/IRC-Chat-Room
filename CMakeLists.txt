@@ -28,5 +28,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 add_executable(server ${SERVER_FILES})
 add_executable(client ${CLIENT_FILES})
 
+set(THREAD_PREFER_PTHREAD_FLAG ON)
 find_package (Threads)
 target_link_libraries (server ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(client Threads::Threads)
