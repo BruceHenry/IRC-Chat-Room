@@ -14,6 +14,10 @@ void Channel::addUser(User* u) {
     this->users.push_back(u);
 }
 
+std::vector<User*> Channel::getUsers() {
+    return this->users;
+}
+
 
 void Channel::sendMessage(User* sender, std::string message) {
 

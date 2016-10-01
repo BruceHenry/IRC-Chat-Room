@@ -7,7 +7,6 @@
 #include "Application/ClientQueue.h"
 #include "Utilities.h"
 #include <vector>
-#include "Application/Channel.h"
 #include <string>
 #include <thread>
 
@@ -16,11 +15,13 @@ using namespace std;
 
 void new_connection(TCPStream *stream, ClientQueue *c);
 void new_channel(Channel* newch, User* person1, User* person2);
+void remove_channel(Channel* ch);
 void connectionManager(ClientQueue* c);
 
 
 TCPAcceptor* acceptor = NULL;
 vector<Channel*> channels;
+ClientQueue cqueue;
 
 int main(int argc, char** argv)
 {
@@ -29,8 +30,8 @@ int main(int argc, char** argv)
         printf("Usage: server <port>\n");
         exit(1);
     }
+    cqueue = ClientQueue();
 
-    ClientQueue cqueue = ClientQueue();
     acceptor = new TCPAcceptor(atoi(argv[1]));
     channels = vector<Channel*>();
 
@@ -67,8 +68,8 @@ void new_channel(Channel *ch, User* person1, User* person2){
     person1->setActiveChannel(ch);
     person2->setActiveChannel(ch);
 
-    send("Found someone! Connecting you to a chat.", person1->getUserStream());
-    send("Found someone! Connecting you to a chat.", person2->getUserStream());
+    send("IN_SESSION", person1->getUserStream());
+    send("IN_SESSION", person2->getUserStream());
 
 }
 
@@ -80,7 +81,6 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue){
     while ((len = stream->receive(line, sizeof(line))) > 0)
     {
         line[len]=0;
-        std::ostringstream oss;
         string rec(line);
 
         vector<string> splitCommand = split(rec, ' ');
@@ -88,27 +88,53 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue){
             me = User(splitCommand[1], stream,  false);
             cqueue->addUser(&me);
 
-            int queuesize = cqueue->getSize();
-            oss << "You are position" << queuesize << "in the queue.\n";
-            send(oss.str(), stream);
-            oss.flush();
+            send("Welcome!", stream);
 
             if(cqueue->getSize() <= 1) {
-                oss << "Currently no one else is online.\n Sorry :(.\n We'll match you with someone"
-                        "once there is another person!\n";
-                send(oss.str(), stream);
+
+                send("There is no one online at the moment :c", stream);
+            }
+            else{
+                send("Type CHAT to connect to a random person!", stream);
+            }
+        }
+
+        if(rec.compare("CHAT") == 0){
+            if (&me != nullptr){
+                me.setChatStatus(true);
             }
         }
 
         if(splitCommand[0].compare("MSG") == 0){
             string msg = rec;
-            if (&me != NULL)
+            if (&me != nullptr)
                 me.sendMessage(msg);
+        }
 
+        if(rec.compare("QUIT") == 0){
+            if (&me != nullptr)
+                me.sendMessage("QUIT " + me.getUsername());
+            remove_channel(me.getActiveChannel());
+        }
+
+        if(rec.compare("HELP") == 0){
+            string helpstring = "COMMANDS:\n HELP\n QUIT\n MSG <USERNAME> <MESSAGE>\n";
+            send(helpstring, stream);
         }
 
     }
     delete stream;
+}
+
+void remove_channel(Channel* ch){
+    std::vector<User*> users = ch->getUsers();
+    for(User* u : users){
+        u->leaveChannel();
+        u->setChatStatus(false);
+        cqueue.addUser(u);
+
+    }
+    delete ch;
 }
 
 void connectionManager(ClientQueue *c){

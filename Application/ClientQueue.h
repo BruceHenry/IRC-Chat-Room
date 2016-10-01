@@ -16,9 +16,10 @@ public:
     void addUser(User *u);
     User* getNext();
     int getSize();
+    int getChattyUsers();
 
 private:
-    std::queue<User*> users;
+    std::vector<User*> users;
 
 };
 
