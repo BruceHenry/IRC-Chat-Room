@@ -21,9 +21,13 @@ void remove_channel(Channel *ch);
 
 void connectionManager(ClientQueue *c);
 
-void adminServer(ClientQueue *cqueue, vector<Channel *> *channels);
+void admin(ClientQueue *cqueue, vector<Channel *> *channels);
 
 void deleteChannel(Channel *c);
+
+void cqueueThread();
+
+bool checkChatStatus(User **firstUser, User **secendUser);
 
 int userNumber(void);
 
@@ -42,38 +46,41 @@ int main(int argc, char **argv) {
     acceptor = new TCPAcceptor(atoi(argv[1]));
     channels = vector<Channel *>();
     string cmd;
+
     while (1) {
-        cout << "To start sever, please input: START\n";
+        cout << "To start server, please input: START\n";
         cin >> cmd;
-        if (cmd.compare("START") == 0)
-            break;
-    }
-
-    cout << "The server is running.\n";
-    std::thread ad(adminServer, &cqueue, &channels);
-    ad.detach();
-
-    if (acceptor->start() == 0) {
+        if (cmd.compare("START") != 0)
+            continue;
+        cout << "The server is running.\n";
+        std::thread ct(cqueueThread);
         std::thread connectionThread(connectionManager, &cqueue);
-        connectionThread.detach();
+        ct.detach();
+        if (acceptor->start() == 0)
+            connectionThread.detach();
+        else {
+            cout << "TCP initialization failed!\n";
+            continue;
+        }
+        admin(&cqueue, &channels);
+    }
+}
 
-        for (;;) {
-            if (cqueue.getSize() > 1) {
+void cqueueThread() {
+    for (;;) {
+        if (cqueue.getSize() > 1) {
+            User *firstperson;
+            User *secondperson;
 
-                User *firstperson = cqueue.getNext();
-                User *secondperson = cqueue.getNext();
+            if (checkChatStatus(&firstperson, &secondperson) == false)
+                continue;
+            Channel *newChannel = new Channel();
 
-                Channel *newChannel = new Channel();
+            channels.push_back(newChannel);
 
-                channels.push_back(newChannel);
-
-                new_channel(newChannel, firstperson, secondperson);
-
-            }
-
+            new_channel(newChannel, firstperson, secondperson);
         }
     }
-    exit(0);
 }
 
 void new_channel(Channel *ch, User *person1, User *person2) {
@@ -84,6 +91,7 @@ void new_channel(Channel *ch, User *person1, User *person2) {
     person1->setActiveChannel(ch);
     person2->setActiveChannel(ch);
 
+    sleep(1);
     send("IN_SESSION", person1->getUserStream());
     send("IN_SESSION", person2->getUserStream());
 
@@ -97,27 +105,28 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue) {
     while ((len = stream->receive(line, sizeof(line))) > 0) {
         line[len] = 0;
         string rec(line);
-        bool pingFlag = false;
 
+        if (rec.compare("PING") == 0) {
+            stream->send("PONG", 5);
+            continue;
+        }
+        if (rec.compare("HELP") == 0) {
+            send("COMMANDS:\n CHAT : To be ready to chat\n", stream);
+            send("MSG <content> : To send messages while chatting with others\n", stream);
+            send("FIle <filename> <filepath> : To send a file(<100 MB)\n", stream);
+            send("QUIT : To quit chatting and be in the queue\n", stream);
+            send("EXIT : To exit the app\n", stream);
+            send("HELP : To get help\n", stream);
+            continue;
+        }
 
         vector<string> splitCommand = split(rec, ' ');
         if (splitCommand[0].compare("CONNECT") == 0) {
+
             me = User(splitCommand[1], stream, false);
             cqueue->addUser(&me);
-
-            send("Welcome!", stream);
-
-            if (cqueue->getSize() <= 1) {
-
-                send("There is no one online at the moment :c", stream);
-            } else {
-                send("Type CHAT to connect to a random person!", stream);
-            }
-        }
-
-        if (rec.compare("PING") == 0 && !pingFlag) {
-            stream->send("PONG", 5);
-            pingFlag = true;
+            send("Welcome!\n", stream);
+            send("Please input CHAT when you are ready to chat.\n", stream);
             continue;
         }
 
@@ -125,12 +134,52 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue) {
             if (&me != nullptr) {
                 me.setChatStatus(true);
             }
+            if (me.getBlockFlag() == true) {
+                send("You are blocked by the admin!\n", stream);
+                continue;
+            }
+            send("We are finding someone for you.\n", stream);
+            continue;
+        }
+
+        if (!me.getActiveChannel()) {
+            if (me.getBlockFlag() == true) {
+                send("You are blocked by the admin!\n", stream);
+                continue;
+            }
+            send("You are not matched with someone!\n", stream);
+            if (me.getChatStatus() == false)
+                send("Please input CHAT when you are ready to chat.\n", stream);
+            continue;
+        }
+
+        if (splitCommand[0].compare("FILE") == 0) {
+            me.getActiveChannel()->transferFile(&me, splitCommand[1], stol(splitCommand[2]));
+            const char *filename2 = "/tmp/server_log.txt";
+            ofstream out(filename2, ios::app);
+            string buffer = "\n";
+            time_t t;
+            time(&t);
+            buffer.append(ctime(&t));
+            buffer.append("From User: ");
+            buffer.append(me.getUsername());
+            buffer.append(" to User: ");
+            buffer.append(me.getActiveChannel()->getOtherUser(&me)->getUsername());
+            buffer.append("\nFile name: ");
+            buffer.append(splitCommand[1]);
+            buffer.append("  File size: ");
+            buffer.append(splitCommand[2]);
+            buffer.append("\n");
+            out << buffer;
+            out.close();
+            continue;
         }
 
         if (splitCommand[0].compare("MSG") == 0) {
             string msg = rec;
             if (&me != nullptr)
                 me.sendMessage(msg);
+            continue;
         }
 
         if (rec.compare("QUIT") == 0) {
@@ -139,13 +188,12 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue) {
                 me.sendMessage("QUIT " + me.getUsername());
             deleteChannel(me.getActiveChannel());
             remove_channel(me.getActiveChannel());
-
+            continue;
         }
 
         if (splitCommand[0].compare("EXIT") == 0) {
             if (!me.getActiveChannel()) {//while in the queue
                 send(splitCommand[0], stream);
-
                 break;
             }
             if (me.getActiveChannel() != NULL) {//Quit while chatting with someone
@@ -158,22 +206,9 @@ void new_connection(TCPStream *stream, ClientQueue *cqueue) {
             }
             send(splitCommand[0], stream);
             cout << "User: " << me.getUsername() << " quited!\n";
-
             cout << "usernumber:" << userNumber() << endl;
             break;
         }
-
-        if (!me.getActiveChannel()) {
-            string s = "You are not matched with someone!\n";
-            send(s, stream);
-            continue;
-        }
-
-        if (rec.compare("HELP") == 0) {
-            string helpstring = "COMMANDS:\n HELP\n QUIT\n MSG <USERNAME> <MESSAGE>\n";
-            send(helpstring, stream);
-        }
-
     }
     delete stream;
 }
@@ -184,7 +219,6 @@ void remove_channel(Channel *ch) {
         u->leaveChannel();
         u->setChatStatus(false);
         cqueue.addUser(u);
-
     }
     delete ch;
 }
@@ -199,8 +233,9 @@ void connectionManager(ClientQueue *c) {
     }
 }
 
-void adminServer(ClientQueue *cqueue, vector<Channel *> *channels) {
+void admin(ClientQueue *cqueue, vector<Channel *> *channels) {
     string cmd;
+    int n = 0;
     while (1) {
         cin.clear();
         std::getline(cin, cmd);
@@ -209,11 +244,13 @@ void adminServer(ClientQueue *cqueue, vector<Channel *> *channels) {
         std::vector<std::string> splitCommand = split(cmd, ' ');
 
         if (splitCommand[0].compare("HELP") == 0) {
-            cout << "To generate a log, please input: STATS\n";
-            cout << "To throwout someone, please input: THROWOUT username\n";
-            cout << "To block someone, please input: BLOCK username\n";
-            cout << "To unblock someone, please input: UNBLOCK username\n";
-            cout << "To end serving, please input: END\n";
+            cout << "COMMANDS:\n";
+            cout << "STATS : To generate a log\n";
+            //cout << "SHOW : To show all users' information\n";
+            cout << "THROWOUT <username> : To throwout someone\n";
+            cout << "BLOCK <username> : To block a user\n";
+            cout << "UNBLOCK <username> : To unblock a user\n";
+            cout << "END : To end serving\n";
             continue;
         }
 
@@ -240,7 +277,7 @@ void adminServer(ClientQueue *cqueue, vector<Channel *> *channels) {
         if (splitCommand[0].compare("THROWOUT") == 0 && splitCommand.size() == 2) {
             for (Channel *c:*channels) {
                 for (User *u: c->getUsers()) {
-                    if (splitCommand[1].compare(u->getUsername())==0) {
+                    if (splitCommand[1].compare(u->getUsername()) == 0) {
                         string msg = "The other client was thrown out by the admin, now you are added to the queue!\n";
                         u->sendMessage(msg);
                         msg = "You were thrown out and added to the queue!\n";
@@ -249,23 +286,74 @@ void adminServer(ClientQueue *cqueue, vector<Channel *> *channels) {
                         deleteChannel(c);
                     }
                 }
-
             }
             continue;
-
         }
 
         if (splitCommand[0].compare("BLOCK") == 0 && splitCommand.size() == 2) {
-
+            for (Channel *c:*channels) {
+                for (User *u: c->getUsers()) {
+                    if (splitCommand[1].compare(u->getUsername()) == 0) {
+                        string msg = "The other client was blocked by the admin, now you are added to the queue!\n";
+                        u->sendMessage(msg);
+                        msg = "You were blocked and added to the queue!\n";
+                        c->getOtherUser(u)->sendMessage(msg);
+                        c->getOtherUser(u)->blockUser();
+                        remove_channel(c);
+                        deleteChannel(c);
+                    }
+                }
+            }
+            continue;
         }
 
         if (splitCommand[0].compare("UNBLOCK") == 0 && splitCommand.size() == 2) {
-
+            for (Channel *c:*channels) {
+                for (User *u: c->getUsers()) {
+                    if (splitCommand[1].compare(u->getUsername()) == 0) {
+                        string msg = "You were now unblocked\n";
+                        c->getOtherUser(u)->sendMessage(msg);
+                        c->getOtherUser(u)->unblockUser();
+                    }
+                }
+            }
         }
+
+        /*if (splitCommand[0].compare("SHOW") == 0 && splitCommand.size() == 1) {
+            for (Channel *c:*channels) {
+                cout<<"\nUsername : "<<c->getUsers()[0]->getUsername();
+                cout<<"  ChatStatus : "<<c->getUsers()[0]->getChatStatus();
+                cout<<"  BlockStatus : "<<c->getUsers()[0]->getBlockFlag()<<endl;
+                cout<<"\nUsername : "<<c->getOtherUser(c->getUsers()[0])->getUsername();
+                cout<<"  ChatStatus : "<<c->getOtherUser(c->getUsers()[0])->getChatStatus();
+                cout<<"  BlockStatus : "<<c->getOtherUser(c->getUsers()[0])->getBlockFlag()<<endl;
+            }
+            n = cqueue->getSize();
+            for (int i = 0; i < n; i++) {
+                User *u=cqueue->getNext();
+                cqueue->addUser(u);
+                cout<<"\nUsername : "<<u->getUsername();
+                cout<<"  ChatStatus : "<<u->getChatStatus();
+                cout<<"  BlockStatus : "<<u->getBlockFlag()<<endl;
+            }
+
+            continue;
+        }*/
+
 
         if (splitCommand[0].compare("END") == 0 && splitCommand.size() == 1) {
-
+            cout << "The server is shutting down.";
+            for (Channel *c:*channels) {
+                c->getUsers()[0]->sendMessage("The server is shut down!\n");
+                c->getOtherUser(c->getUsers()[0])->sendMessage("EXIT");
+            }
+            n = cqueue->getSize();
+            for (int i = 0; i < n; i++) {
+                cqueue->getNext()->getUserStream()->send("EXIT", 5);
+            }
+            exit(0);
         }
+
         cout << "Invalid command! To get help, please input: HELP\n";
     }
 }
@@ -277,12 +365,33 @@ void deleteChannel(Channel *c) {
                 channels.erase(channels.begin() + i);
             }
         }
-
     }
-
 }
 
 int userNumber() {
     return channels.size() * 2 + cqueue.getSize();
 }
 
+bool checkChatStatus(User **firstUser, User **secendUser) {
+    User *u;
+    bool findFirstFlag = false;
+    int n = cqueue.getSize();
+    for (int i = 0; i < n; i++) {
+        u = cqueue.getNext();
+        if (u->getChatStatus() && (!u->getBlockFlag())) {
+            if (findFirstFlag == false) {
+                *firstUser = u;
+                findFirstFlag = true;
+                continue;
+            } else {
+                *secendUser = u;
+                return true;
+            }
+        }
+        cqueue.addUser(u);
+    }
+    if (findFirstFlag == true) {
+        cqueue.addUser(*firstUser);
+    }
+    return false;
+}

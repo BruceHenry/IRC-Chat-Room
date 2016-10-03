@@ -26,18 +26,22 @@ TCPStream *stream = NULL;
 
 int main(int argc, char **argv) {
     pthread_t id;
-    std::string ip;
-    std::string port;
     std::string cmd;
     TCPConnector *connector = NULL;
     while (1) {
         connector = new TCPConnector();
-        stream = connector->connect(argv[2],atoi(argv[1]));
+        stream = connector->connect(argv[2], atoi(argv[1]));
         if (!test_tcp_connection(stream)) {
             cout << "No server is found!\n";
             if (connector)delete connector;
             if (stream)delete stream;
-            sleep(2);//////////////////
+            cout << "Do you want to re-connect? Input yes to continue.\n";
+            while (1){
+                cin.clear();
+                std::getline(cin, cmd);
+                if (cmd.compare("yes") == 0 || cmd.compare("YES") == 0 || cmd.compare("Yes") == 0)
+                    break;
+            }
             continue;
         }
 
@@ -86,6 +90,7 @@ int main(int argc, char **argv) {
         delete stream;
         sleep(2);
     }
+
 }
 
 bool test_tcp_connection(TCPStream *stream) {
@@ -119,9 +124,7 @@ void *send_messege(void *ptr) {
             return ptr;
         }
         if (splitCommand[0].compare("HELP") == 0) {
-            cout << "To send messages, please input:MSG message\n\n";
-            cout << "To send a file, please input:FILE filename filepath\n\n";
-            cout << "To quit, please input:QUIT\n\n";
+            stream->send(splitCommand[0].c_str(), splitCommand[0].size());
             continue;
         }
         if ((splitCommand[0].compare("FILE") == 0) && (splitCommand.size() == 3)) {
@@ -132,11 +135,11 @@ void *send_messege(void *ptr) {
             stream->send(sendString.c_str(), sendString.size());
             continue;
         }
-        if (splitCommand[0].compare("QUIT") == 0) {
+        if (sendString.compare("QUIT") == 0) {
             stream->send(sendString.c_str(), sendString.size());
             continue;
         }
-        if (splitCommand[0].compare("CHAT") == 0) {
+        if (sendString.compare("CHAT") == 0) {
             stream->send(sendString.c_str(), sendString.size());
             continue;
         }

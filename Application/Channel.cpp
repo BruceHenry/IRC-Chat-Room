@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include "Channel.h"
 #include <iostream>
+#include <fstream>
 
 Channel::Channel() {
     users = std::vector<User*>();
