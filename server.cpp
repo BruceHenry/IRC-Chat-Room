@@ -17,6 +17,7 @@ void new_connection(TCPStream *stream, ClientQueue *c);
 void new_channel(Channel* newch, User* person1, User* person2);
 void remove_channel(Channel* ch);
 void connectionManager(ClientQueue* c);
+void adminServer(ClientQueue *cqueue, vector<Channel *> * channels);
 
 
 TCPAcceptor* acceptor = NULL;
@@ -146,3 +147,59 @@ void connectionManager(ClientQueue *c){
         }
     }
 }
+
+void adminServer(ClientQueue *cqueue, vector<Channel *> *channels) {
+    string cmd;
+    while (1) {
+        cin.clear();
+        std::getline(cin, cmd);
+        if (cmd.compare("") == 0)
+            continue;
+        std::vector<std::string> splitCommand = split(cmd, ' ');
+
+        if (splitCommand[0].compare("HELP") == 0) {
+            cout<<"To generate a log, please input: STATS\n";
+            cout<<"To throwout someone, please input: THROWOUT username\n";
+            cout<<"To block someone, please input: BLOCK username\n";
+            cout<<"To unblock someone, please input: UNBLOCK username\n";
+            cout<<"To end serving, please input: END\n";
+            continue;
+        }
+
+        if (splitCommand[0].compare("STATS") == 0 && splitCommand.size() == 1) {
+            const char *filename2 = "/tmp/server_log.txt";
+            ofstream out(filename2, ios::app);
+            string buffer="\n";
+            time_t t;
+            time (&t);
+            buffer.append(ctime(&t));
+            buffer.append("Queue Size: ");
+            buffer.append(to_string(cqueue->getSize()));
+            buffer.append("\nChannel Size: ");
+            buffer.append(to_string(channels->size()));
+            buffer.append("\nTotal user numbers:: ");
+            buffer.append(to_string(usernumber));
+            buffer.append("\n");
+            cout<<buffer;
+            out<<buffer;
+            out.close();
+            continue;
+        }
+
+        if (splitCommand[0].compare("THROWOUT") == 0 && splitCommand.size() == 2) {
+
+        }
+
+        if (splitCommand[0].compare("BLOCK") == 0 && splitCommand.size() == 2) {
+
+        }
+
+        if (splitCommand[0].compare("UNBLOCK") == 0 && splitCommand.size() == 2) {
+
+        }
+
+        if (splitCommand[0].compare("END") == 0 && splitCommand.size() == 1) {
+
+        }
+        cout<<"Invalid command! To get help, please input: HELP\n";
+    }

@@ -30,41 +30,37 @@ void Channel::sendMessage(User* sender, std::string message) {
 
 }
 
-void Channel::transferFile(User* sender, std::string filename, long filesize) {
-    char* mfcc;
+void Channel::transferFile(User *sender, std::string filename, long filesize) {
+    char *mfcc;
+    cout << "Tranfering a file" << endl;
     long sizecheck = 0;
-    int received=0;
-    TCPStream* s=sender->getUserStream();
-    std::string filemessage="/file"+std::string(" ")+filename+std::string(" ")+std::to_string(filesize);
-    if(filesize >1499){
-        mfcc=(char *) malloc(1500);
-        int i=1;
-        while(sizecheck<filesize){
-            received=s->receive(mfcc,1500);
-            i++;
-            for (User* u:users) {
+    int received = 0;
 
-                TCPStream* r=u->getUserStream();
-                if(i==0) {
+    TCPStream *s = sender->getUserStream();
+    std::string filemessage = "FILE" + std::string(" ") + filename + std::string(" ") + std::to_string(filesize);
+    int i = 0;
+    while (sizecheck < filesize) {
+        if ((filesize - sizecheck) <= 1500) {
+            mfcc = new char[(filesize - sizecheck)];
+            received = s->receive(mfcc, filesize - sizecheck);
+        } else {
+            mfcc = new char[1500];
+            received = s->receive(mfcc, 1500);
+        }
+        i++;
+        for (User *u:users) {
+            if (*u != *sender) {
+                TCPStream *r = u->getUserStream();
+                if (i == 1) {
                     r->send(filemessage.c_str(), filemessage.size());
+                    sleep(0.5);
                 }
-                r->send(mfcc,received);
-
+                r->send(mfcc, received);
             }
-            sizecheck+=received;
-
         }
+        sizecheck += received;
+        if (received == 0)
+            break;
     }
-    else{
-        mfcc=(char *) malloc(filesize+1);
-        received=s->receive(mfcc,filesize);
-        for (User* u:users) {
-            TCPStream* r=u->getUserStream();
-            r->send(filemessage.c_str(), filemessage.size());
-            r->send(mfcc,received);
-
-        }
-
-    }
-
+    printf("Have finished file transfering\n");
 }
