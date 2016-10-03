@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
                     printf("Have received a file\n");
                     continue;
                 }
-                if (splitCommand[0].compare("QUIT") == 0) {
+                if (splitCommand[0].compare("EXIT") == 0) {
                     cout << "The Chatting Channel is closed!\n\n";
                     break;
                 } else
@@ -98,7 +98,7 @@ bool test_tcp_connection(TCPStream *stream) {
         if (response.compare("PONG") == 0) {
             cout << "=============CONNECTING==============\n";
             cout << " SUCCESSFULLY CONNECTED TO THE SERVER\n";
-            cout << "To chat with someone, please input:\nCONNECT username\n";
+            cout << "ENTER CONNECT \"USERNAME\" TO BE ADDED TO THE QUEUE\n";
             return true;
         }
     }
@@ -114,7 +114,7 @@ void *send_messege(void *ptr) {
         if (sendString.compare("") == 0)
             continue;
         std::vector<std::string> splitCommand = split(sendString, ' ');
-        if (sendString.compare("QUIT") == 0) {
+        if (sendString.compare("EXIT") == 0) {
             stream->send(sendString.c_str(), sendString.size());
             return ptr;
         }
@@ -129,6 +129,14 @@ void *send_messege(void *ptr) {
             continue;
         }
         if (splitCommand[0].compare("MSG") == 0) {
+            stream->send(sendString.c_str(), sendString.size());
+            continue;
+        }
+        if (splitCommand[0].compare("QUIT") == 0) {
+            stream->send(sendString.c_str(), sendString.size());
+            continue;
+        }
+        if (splitCommand[0].compare("CHAT") == 0) {
             stream->send(sendString.c_str(), sendString.size());
             continue;
         }
