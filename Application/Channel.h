@@ -20,6 +20,7 @@ public:
     void removeUser(User* u);
     std::vector<User*> getUsers();
     void transferFile(User* u, std::string filename,long filesize);
+    User* getOtherUser(User* u);
 
 private:
     std::vector<User*> users;

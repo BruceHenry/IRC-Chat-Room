@@ -34,3 +34,5 @@ int ClientQueue::getChattyUsers() {
 int ClientQueue::getSize(){
     return this->users.size();
 }
+
+

@@ -4,6 +4,8 @@
 
 #include <cstdlib>
 #include "Channel.h"
+#include <iostream>
+#include <fstream>
 
 Channel::Channel() {
     users = std::vector<User*>();
@@ -63,4 +65,11 @@ void Channel::transferFile(User *sender, std::string filename, long filesize) {
             break;
     }
     printf("Have finished file transfering\n");
+}
+
+User* Channel::getOtherUser(User* u){
+    for (User *a:users){
+        if (*a != *u)
+            return a;
+    }
 }

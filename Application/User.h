@@ -26,11 +26,15 @@ public:
     TCPStream* getUserStream();
     std::string getUsername();
     void sendMessage(string msg);
+    void blockUser();
+    void unblockUser();
+    bool getBlockFlag();
 
 private:
     int id;
     bool isAdmin;
     bool requestedChat;
+    bool blockFlag;
     std::string username;
     TCPStream *stream;
     Channel *currentChannel;

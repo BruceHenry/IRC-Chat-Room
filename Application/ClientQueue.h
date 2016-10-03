@@ -17,6 +17,7 @@ public:
     User* getNext();
     int getSize();
     int getChattyUsers();
+    bool chatStatus();
 
 private:
     std::vector<User*> users;
