@@ -9,17 +9,20 @@
 #include <string>
 #include <vector>
 #include "User.h"
-#include "Message.h"
+
+class User;
 
 class Channel {
 public:
     Channel();
     void addUser(User* u);
     void sendMessage(User* u, std::string message);
-    void openChannel();
+    void removeUser(User* u);
+    std::vector<User*> getUsers();
+    void transferFile(User* u, std::string filename,long filesize);
+    User* getOtherUser(User* u);
 
 private:
-    std::vector<Message> messages;
     std::vector<User*> users;
 
 };
