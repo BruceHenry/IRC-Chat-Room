@@ -18,7 +18,7 @@ set(SERVER_FILES
         Utilities.h)
 
 set(CLIENT_FILES
-        example_client.cpp
+        client.cpp
         TCP/TCPAcceptor.cpp
         TCP/TCPAcceptor.h
         TCP/TCPConnector.cpp
