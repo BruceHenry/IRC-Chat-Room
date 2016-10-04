@@ -1,6 +1,4 @@
-# Project1
-ChatRoullette
-
+# IRC Chat Room
 
 # Commands
 
