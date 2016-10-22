@@ -3,13 +3,13 @@
 # Commands
 
 ### Connect
-Request to join the queue
-
 ``` CONNECT <username>```
 
-### Send a message
-``` MSG <username> <message>```
+###Chat with someone
+```CHAT
 
-## In session
-informs the client that they are in a chatroom
-``` INSESSION ```
+### Send a message
+``` MSG <message>```
+
+### Send a file
+```FILE <fileName> <fileLocation>```
